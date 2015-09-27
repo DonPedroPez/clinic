@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import (RegexValidator, MinLengthValidator,
@@ -12,8 +14,8 @@ class DutyManager(models.Manager):
 
 class AppointmentManager(models.Manager):
     def get_queryset(self):
-        return super(DutyManager, self).get_quetyset() \
-                                       .filter(patient__isnull=False)
+        return super(AppointmentManager, self).get_queryset() \
+                                              .filter(patient__isnull=False)
 
 
 class Rendezvous(models.Model):
@@ -32,13 +34,13 @@ class Rendezvous(models.Model):
     start = models.TimeField()
     end = models.TimeField()
 
-    doctor = models.ForeignKey(Doctor)
-    clinic = models.ForeignKey(Clinic)
-    patient = models.ForeignKey(Patient, blank=True, null=True)
+    doctor = models.ForeignKey('Doctor')
+    clinic = models.ForeignKey('Clinic')
+    patient = models.ForeignKey('Patient', blank=True, null=True)
 
 
 class Patient(models.Model):
-    user = models.OneToOneField(User)
+    user = models.OneToOneField(User, unique=True, related_name='patients')
     accepted = models.BooleanField(default=False)
 
     pesel = models.CharField(unique=True,
@@ -50,24 +52,33 @@ class Patient(models.Model):
                                      code='NotNumber'
                                  ),
                                  MinLengthValidator(
-                                     min_length=11,
+                                     11,
                                      message='PESEL has exactly 11 digits.'
                                  ),
                                  MaxLengthValidator(
-                                     max_length=11,
+                                     11,
                                      message='PESEL has exactly 11 digits.'
                                  )
                              ])
     address = models.TextField()
 
+    def __unicode__(self):
+        return "{} {}".format(self.user.first_name, self.user.last_name)
+
 
 class Doctor(models.Model):
-    user = models.OneToOneField(User)
+    user = models.OneToOneField(User, unique=True, related_name='doctors')
     license = models.CharField(unique=True, max_length=20)
+
+    def __unicode__(self):
+        return "{} {}".format(self.user.first_name, self.user.last_name)
 
 
 class Clinic(models.Model):
     name = models.CharField(max_length=100)
+
+    def __unicode__(self):
+        return self.name
 
 
 class Duty(Rendezvous):
@@ -75,6 +86,7 @@ class Duty(Rendezvous):
 
     class Meta:
         proxy = True
+        verbose_name_plural = 'duties'
 
 
 class Appointment(Rendezvous):
@@ -82,4 +94,3 @@ class Appointment(Rendezvous):
 
     class Meta:
         proxy = True
-

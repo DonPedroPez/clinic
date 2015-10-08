@@ -1,42 +1,10 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import (RegexValidator, MinLengthValidator,
     MaxLengthValidator)
-
-
-class DutyManager(models.Manager):
-    def get_queryset(self):
-        return super(DutyManager, self).get_queryset() \
-                                       .exclude(patient__isnull=False)
-
-
-class AppointmentManager(models.Manager):
-    def get_queryset(self):
-        return super(AppointmentManager, self).get_queryset() \
-                                              .filter(patient__isnull=False)
-
-
-class Rendezvous(models.Model):
-    WEEKDAY_CHOICES = (
-        (1, 'Monday'),
-        (2, 'Tuesday'),
-        (3, 'Wednesday'),
-        (4, 'Thursday'),
-        (5, 'Friday'),
-        (6, 'Saturday'),
-        (7, 'Sunday'),
-    )
-
-    weekday = models.IntegerField(choices=WEEKDAY_CHOICES)
-    date = models.DateField(blank=True, null=True)
-    start = models.TimeField()
-    end = models.TimeField()
-
-    doctor = models.ForeignKey('Doctor')
-    clinic = models.ForeignKey('Clinic')
-    patient = models.ForeignKey('Patient', blank=True, null=True)
+from django.core.exceptions import ValidationError
 
 
 class Patient(models.Model):
@@ -81,16 +49,100 @@ class Clinic(models.Model):
         return self.name
 
 
-class Duty(Rendezvous):
-    objects = DutyManager()
+class Duty(models.Model):
+    WEEKDAY_CHOICES = (
+        (0, 'Monday'),
+        (1, 'Tuesday'),
+        (2, 'Wednesday'),
+        (3, 'Thursday'),
+        (4, 'Friday'),
+        (5, 'Saturday'),
+        (6, 'Sunday'),
+    )
+
+    weekday = models.IntegerField(choices=WEEKDAY_CHOICES)
+    start = models.TimeField()
+    end = models.TimeField(blank=True)
+
+    doctor = models.ForeignKey('Doctor')
+    clinic = models.ForeignKey('Clinic')
 
     class Meta:
-        proxy = True
         verbose_name_plural = 'duties'
 
+    def clean(self):
+        if not self.end:
+            self.end = (datetime.combine(self.date, self.start)
+                        + timedelta(hours=8)).time()
 
-class Appointment(Rendezvous):
-    objects = AppointmentManager()
+        duties = Duty.objects.filter(doctor=self.doctor, weekday=self.weekday)
+        for duty in duties:
+            if (self.start <= duty.start <= self.end) or \
+               (self.start <= duty.end <= self.end) or \
+               (self.start >= duty.start and self.end <= duty.end):
+                raise ValidationError('Duty collides with another in clinic'
+                                      ' {clinic}. {doctor} works there between'
+                                      ' {start} and {end} on {weekday}s'
+                                      .format(clinic=duty.clinic.name,
+                                              doctor=duty.doctor,
+                                              start=duty.start,
+                                              end=duty.end,
+                                              weekday=Duty.WEEKDAY_CHOICES[
+                                                  duty.weekday][1]))
 
-    class Meta:
-        proxy = True
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super(Duty, self).save(*args, **kwargs)
+
+
+class Appointment(models.Model):
+    date = models.DateField()
+    start = models.TimeField()
+    end = models.TimeField(blank=True)
+
+    doctor = models.ForeignKey('Doctor')
+    clinic = models.ForeignKey('Clinic')
+    patient = models.ForeignKey('Patient')
+
+    def clean(self):
+        if self.end is None:
+            self.end = (datetime.combine(self.date, self.start)
+                        + timedelta(minutes=29, seconds=59)).time()
+        elif self.end.minute == 30 or self.end.minute == 0:
+            self.end = (datetime.combine(self.date, self.end)
+                        - timedelta(seconds=1)).time()
+        appointments = Appointment.objects.filter(clinic=self.clinic,
+                                                  doctor=self.doctor)
+        for appointment in appointments:
+            if (self.start <= appointment.start <= self.end) or \
+               (self.start <= appointment.end <= self.end) or \
+               (self.start >= appointment.start and
+               self.end <= appointment.end):
+                if self.id != appointment.id:
+                    raise ValidationError('Appointment collides with another'
+                                          ' ({start} - {end})'.format(
+                        start=appointment.start, end=appointment.end))
+        duties = Duty.objects.filter(doctor=self.doctor, clinic=self.clinic,
+                                     weekday=self.date.weekday())
+        if not duties:
+            raise ValidationError('Doctor {doctor} doesn\'t work at {clinic}'
+                                  ' on {weekday}s'.format(
+                doctor=self.doctor, clinic=self.clinic,
+                weekday=Duty.WEEKDAY_CHOICES[self.date.weekday()][1]))
+        for duty in duties:
+            if (self.start <= duty.start <= self.end) or \
+               (self.start <= duty.end <= self.end) or \
+               (self.end <= duty.start) or (self.start >= duty.end):
+                raise ValidationError('Doctor {doctor} is present between'
+                                      ' {start} and {end}'.format(
+                    doctor=self.doctor, start=duty.start, end=duty.end))
+
+    def save(self, *args, **kwargs):
+        if self.end is None:
+            self.end = (datetime.combine(self.date, self.start)
+                        + timedelta(minutes=29, seconds=59)).time()
+        elif self.end.minute == 30 or self.end.minute == 0:
+            self.end = (datetime.combine(self.date, self.end)
+                        - timedelta(seconds=1)).time()
+        self.full_clean()
+        super(Appointment, self).save(*args, **kwargs)

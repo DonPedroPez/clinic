@@ -44,7 +44,6 @@ class DutyAdmin(admin.ModelAdmin):
     list_display = ('clinic', 'doctor', 'weekday', 'start', 'end')
     list_filter = ('clinic', 'doctor')
     search_fields = ('clinic', 'doctor')
-    fields = ('weekday', 'start', 'end', 'doctor', 'clinic')
 
 
 class AppointmentAdmin(admin.ModelAdmin):

@@ -14,6 +14,15 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
+            name='Appointment',
+            fields=[
+                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
+                ('date', models.DateField()),
+                ('start', models.TimeField()),
+                ('end', models.TimeField(blank=True)),
+            ],
+        ),
+        migrations.CreateModel(
             name='Clinic',
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
@@ -25,7 +34,18 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('license', models.CharField(unique=True, max_length=20)),
-                ('user', models.OneToOneField(to=settings.AUTH_USER_MODEL)),
+                ('user', models.OneToOneField(related_name='doctors', to=settings.AUTH_USER_MODEL)),
+            ],
+        ),
+        migrations.CreateModel(
+            name='Duty',
+            fields=[
+                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
+                ('weekday', models.IntegerField(choices=[(0, b'Monday'), (1, b'Tuesday'), (2, b'Wednesday'), (3, b'Thursday'), (4, b'Friday'), (5, b'Saturday'), (6, b'Sunday')])),
+                ('start', models.TimeField()),
+                ('end', models.TimeField(blank=True)),
+                ('clinic', models.ForeignKey(to='appointments.Clinic')),
+                ('doctor', models.ForeignKey(to='appointments.Doctor')),
             ],
         ),
         migrations.CreateModel(
@@ -35,38 +55,22 @@ class Migration(migrations.Migration):
                 ('accepted', models.BooleanField(default=False)),
                 ('pesel', models.CharField(unique=True, max_length=11, validators=[django.core.validators.RegexValidator(regex=b'\\d+', message=b'PESEL contains only numbers.', code=b'NotNumber'), django.core.validators.MinLengthValidator(11, message=b'PESEL has exactly 11 digits.'), django.core.validators.MaxLengthValidator(11, message=b'PESEL has exactly 11 digits.')])),
                 ('address', models.TextField()),
-                ('user', models.OneToOneField(to=settings.AUTH_USER_MODEL)),
+                ('user', models.OneToOneField(related_name='patients', to=settings.AUTH_USER_MODEL)),
             ],
         ),
-        migrations.CreateModel(
-            name='Rendezvous',
-            fields=[
-                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
-                ('weekday', models.IntegerField(choices=[(1, b'Monday'), (2, b'Tuesday'), (3, b'Wednesday'), (4, b'Thursday'), (5, b'Friday'), (6, b'Saturday'), (7, b'Sunday')])),
-                ('date', models.DateField(null=True, blank=True)),
-                ('start', models.TimeField()),
-                ('end', models.TimeField()),
-                ('clinic', models.ForeignKey(to='appointments.Clinic')),
-                ('doctor', models.ForeignKey(to='appointments.Doctor')),
-                ('patient', models.ForeignKey(blank=True, to='appointments.Patient', null=True)),
-            ],
+        migrations.AddField(
+            model_name='appointment',
+            name='clinic',
+            field=models.ForeignKey(to='appointments.Clinic'),
         ),
-        migrations.CreateModel(
-            name='Appointment',
-            fields=[
-            ],
-            options={
-                'proxy': True,
-            },
-            bases=('appointments.rendezvous',),
+        migrations.AddField(
+            model_name='appointment',
+            name='doctor',
+            field=models.ForeignKey(to='appointments.Doctor'),
         ),
-        migrations.CreateModel(
-            name='Duty',
-            fields=[
-            ],
-            options={
-                'proxy': True,
-            },
-            bases=('appointments.rendezvous',),
+        migrations.AddField(
+            model_name='appointment',
+            name='patient',
+            field=models.ForeignKey(to='appointments.Patient'),
         ),
     ]

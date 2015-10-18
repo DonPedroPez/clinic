@@ -72,8 +72,10 @@ class Duty(models.Model):
         verbose_name_plural = 'duties'
 
     def clean(self):
+        if not self.start:
+            return
         if not self.end:
-            self.end = (datetime.combine(now().date, self.start)
+            self.end = (datetime.combine(now().date(), self.start)
                         + timedelta(hours=8)).time()
 
         duties = Duty.objects.filter(doctor=self.doctor, weekday=self.weekday)
@@ -92,7 +94,7 @@ class Duty(models.Model):
                                                   duty.weekday][1]))
 
     def save(self, *args, **kwargs):
-        self.full_clean()
+        self.clean()
         super(Duty, self).save(*args, **kwargs)
 
 
@@ -106,6 +108,8 @@ class Appointment(models.Model):
     patient = models.ForeignKey('Patient')
 
     def clean(self):
+        if not self.start:
+            return
         if self.end is None:
             self.end = (datetime.combine(self.date, self.start)
                         + timedelta(minutes=29, seconds=59)).time()
@@ -145,5 +149,5 @@ class Appointment(models.Model):
         elif self.end.minute == 30 or self.end.minute == 0:
             self.end = (datetime.combine(self.date, self.end)
                         - timedelta(seconds=1)).time()
-        self.full_clean()
+        self.clean()
         super(Appointment, self).save(*args, **kwargs)

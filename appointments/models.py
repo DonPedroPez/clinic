@@ -5,6 +5,7 @@ from django.contrib.auth.models import User
 from django.core.validators import (RegexValidator, MinLengthValidator,
     MaxLengthValidator)
 from django.core.exceptions import ValidationError
+from django.utils.timezone import now
 
 
 class Patient(models.Model):
@@ -72,13 +73,13 @@ class Duty(models.Model):
 
     def clean(self):
         if not self.end:
-            self.end = (datetime.combine(self.date, self.start)
+            self.end = (datetime.combine(now().date, self.start)
                         + timedelta(hours=8)).time()
 
         duties = Duty.objects.filter(doctor=self.doctor, weekday=self.weekday)
         for duty in duties:
-            if (self.start <= duty.start <= self.end) or \
-               (self.start <= duty.end <= self.end) or \
+            if (self.start < duty.start < self.end) or \
+               (self.start < duty.end < self.end) or \
                (self.start >= duty.start and self.end <= duty.end):
                 raise ValidationError('Duty collides with another in clinic'
                                       ' {clinic}. {doctor} works there between'
@@ -114,8 +115,8 @@ class Appointment(models.Model):
         appointments = Appointment.objects.filter(clinic=self.clinic,
                                                   doctor=self.doctor)
         for appointment in appointments:
-            if (self.start <= appointment.start <= self.end) or \
-               (self.start <= appointment.end <= self.end) or \
+            if (self.start < appointment.start < self.end) or \
+               (self.start < appointment.end < self.end) or \
                (self.start >= appointment.start and
                self.end <= appointment.end):
                 if self.id != appointment.id:
@@ -130,8 +131,8 @@ class Appointment(models.Model):
                 doctor=self.doctor, clinic=self.clinic,
                 weekday=Duty.WEEKDAY_CHOICES[self.date.weekday()][1]))
         for duty in duties:
-            if (self.start <= duty.start <= self.end) or \
-               (self.start <= duty.end <= self.end) or \
+            if (self.start < duty.start < self.end) or \
+               (self.start < duty.end < self.end) or \
                (self.end <= duty.start) or (self.start >= duty.end):
                 raise ValidationError('Doctor {doctor} is present between'
                                       ' {start} and {end}'.format(

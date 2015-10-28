@@ -8,7 +8,7 @@ from django.contrib.auth.decorators import login_required
 
 from .forms import (UserRegistrationForm, PatientRegistrationForm,
                     AppointmentReservationForm)
-from .models import Appointment, Patient
+from .models import Appointment, Patient, Doctor
 
 
 def register_patient(request):
@@ -55,3 +55,15 @@ def reserve_appointment(request):
 
     return render(request, 'appointments/reserve_appointment.html',
                   {'form': form})
+
+
+@login_required
+def doctors_visits(request):
+    try:
+        doctor = Doctor.objects.get(user=request.user)
+    except Doctor.DoesNotExist:
+        return redirect('waiting_room')
+    appointments = Appointment.objects.filter(doctor=doctor).order_by('-date')
+
+    return render(request, 'appointments/doctors_visits.html',
+                  {'appointments': appointments})

@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <p><a href="{% url 'waiting_room' %}">
+        <span>Go to waiting room</span>
+    </a></p>
+    <table>
+        <thead>
+            <td>Clinic</td>
+            <td>Patient</td>
+            <td>Date</td>
+            <td>Start</td>
+            <td>End</td>
+        </thead>
+        <tbody>
+            {% for appointment in appointments %}
+                <tr>
+                    <td>{{ appointment.clinic }}</td>
+                    <td>{{ appointment.patient }}</td>
+                    <td>{{ appointment.date }}</td>
+                    <td>{{ appointment.start }}</td>
+                    <td>{{ appointment.end }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock content %}

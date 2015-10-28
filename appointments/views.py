@@ -4,8 +4,10 @@ from django.contrib import auth
 from django.core.context_processors import csrf
 from django.shortcuts import redirect
 from django.template import RequestContext
+from django.contrib.auth.decorators import login_required
 
-from forms import UserRegistrationForm, PatientRegistrationForm
+from .forms import UserRegistrationForm, PatientRegistrationForm
+from .models import Appointment, Patient
 
 
 def register_patient(request):
@@ -19,9 +21,20 @@ def register_patient(request):
                   {'user_form': user_form, 'patient_form': patient_form})
 
 
+@login_required
 def waiting_room(request):
     return render(request, 'appointments/waiting_room.html',
                   context_instance=RequestContext(request))
 
+
+@login_required
 def patients_visits(request):
-    return render(request, 'appointments/patients_visits.html')
+    try:
+        patient = Patient.objects.get(user=request.user)
+    except Patient.DoesNotExist:
+        return redirect('waiting_room')
+    appointments = Appointment.objects.filter(patient=patient) \
+                                      .order_by('-date')
+
+    return render(request, 'appointments/patients_visits.html',
+                  {'appointments': appointments})

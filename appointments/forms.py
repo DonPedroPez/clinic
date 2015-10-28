@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
 
-from models import Patient
+from models import Patient, Appointment
 
 
 class UserRegistrationForm(UserCreationForm):
@@ -36,3 +36,19 @@ class PatientRegistrationForm(forms.ModelForm):
             patient.save()
 
         return patient
+
+
+class AppointmentReservationForm(forms.ModelForm):
+
+    class Meta:
+        model = Appointment
+        fields = ['clinic', 'doctor', 'date', 'start']
+
+    def save(self, patient, commit=True):
+        appointment = super(AppointmentReservationForm, self).save(commit=False)
+        appointment.patient = patient
+
+        if commit:
+            appointment.save()
+
+        return appointment

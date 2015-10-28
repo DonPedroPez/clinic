@@ -6,7 +6,8 @@ from django.shortcuts import redirect
 from django.template import RequestContext
 from django.contrib.auth.decorators import login_required
 
-from .forms import UserRegistrationForm, PatientRegistrationForm
+from .forms import (UserRegistrationForm, PatientRegistrationForm,
+                    AppointmentReservationForm)
 from .models import Appointment, Patient
 
 
@@ -38,3 +39,19 @@ def patients_visits(request):
 
     return render(request, 'appointments/patients_visits.html',
                   {'appointments': appointments})
+
+
+@login_required
+def reserve_appointment(request):
+    try:
+        patient = Patient.objects.get(user=request.user)
+    except Patient.DoesNotExist:
+        return redirect('waiting_room')
+    form = AppointmentReservationForm(request.POST or None)
+
+    if form.is_valid():
+        form.save(patient)
+        return redirect('patients_visits')
+
+    return render(request, 'appointments/reserve_appointment.html',
+                  {'form': form})

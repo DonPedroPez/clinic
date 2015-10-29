@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
 
-from models import Patient, Appointment
+from models import Patient, Appointment, Duty
 
 
 class UserRegistrationForm(UserCreationForm):
@@ -52,3 +52,22 @@ class AppointmentReservationForm(forms.ModelForm):
             appointment.save()
 
         return appointment
+
+
+class DutyEditForm(forms.ModelForm):
+
+    class Meta:
+        model = Duty
+        fields = ['clinic', 'weekday', 'start', 'end', 'doctor']
+        widgets = {
+            'doctor': forms.HiddenInput()
+        }
+
+    def save(self, doctor, commit=True):
+        duty = super(DutyEditForm, self).save(commit=False)
+        duty.doctor = doctor
+
+        if commit:
+            duty.save()
+
+        return duty

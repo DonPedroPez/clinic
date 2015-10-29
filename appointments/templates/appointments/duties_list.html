@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <p><a href="{% url 'doctors_visits' %}">
+        <span>View my appointments</span>
+    </a></p>
+    <table>
+        <thead>
+            <td>Clinic</td>
+            <td>Weekday</td>
+            <td>Start</td>
+            <td>End</td>
+        </thead>
+        <tbody>
+            {% for duty in duties %}
+                <tr>
+                    <td><a href="{% url 'duty_details' duty.id %}">{{ duty.clinic }}</a></td>
+                    <td>{{ duty.get_weekday_display }}</td>
+                    <td>{{ duty.start }}</td>
+                    <td>{{ duty.end }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock content %}

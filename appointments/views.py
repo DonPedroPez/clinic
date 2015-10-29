@@ -7,8 +7,8 @@ from django.template import RequestContext
 from django.contrib.auth.decorators import login_required
 
 from .forms import (UserRegistrationForm, PatientRegistrationForm,
-                    AppointmentReservationForm)
-from .models import Appointment, Patient, Doctor
+                    AppointmentReservationForm, DutyEditForm)
+from .models import Appointment, Patient, Doctor, Duty
 
 
 def register_patient(request):
@@ -67,3 +67,41 @@ def doctors_visits(request):
 
     return render(request, 'appointments/doctors_visits.html',
                   {'appointments': appointments})
+
+
+@login_required
+def doctors_duties_list(request):
+    try:
+        doctor = Doctor.objects.get(user=request.user)
+    except Doctor.DoesNotExist:
+        return redirect('waiting_room')
+    duties = Duty.objects.filter(doctor=doctor).order_by('weekday', 'start')
+
+    return render(request, 'appointments/duties_list.html',
+                  {'duties': duties})
+
+
+@login_required
+def doctors_duty_details(request, duty_id=None):
+    try:
+        doctor = Doctor.objects.get(user=request.user)
+    except Doctor.DoesNotExist:
+        return redirect('waiting_room')
+    if duty_id:
+        try:
+            duty = Duty.objects.get(pk=duty_id)
+        except Duty.DoesNotExist:
+            return redirect('duties_list')
+        else:
+            if request.method == "POST":
+                form = DutyEditForm(request.POST, instance=duty)
+            else:
+                form = DutyEditForm(instance=duty)
+    else:
+        form = DutyEditForm(request.POST or {'doctor': doctor.id})
+
+    if form.is_valid():
+        form.save(doctor)
+        return redirect('duties_list')
+
+    return render(request, 'appointments/duty_details.html', {'form': form})

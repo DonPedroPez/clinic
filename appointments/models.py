@@ -78,7 +78,8 @@ class Duty(models.Model):
             self.end = (datetime.combine(now().date(), self.start)
                         + timedelta(hours=8)).time()
 
-        duties = Duty.objects.filter(doctor=self.doctor, weekday=self.weekday)
+        duties = Duty.objects.filter(doctor=self.doctor, weekday=self.weekday) \
+                     .exclude(id=self.id)
         for duty in duties:
             if (self.start < duty.start < self.end) or \
                (self.start < duty.end < self.end) or \
